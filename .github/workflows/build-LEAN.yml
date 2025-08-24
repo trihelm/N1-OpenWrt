@@ -6,6 +6,8 @@ on:
 env:
   REPO_URL: https://github.com/coolsnowwolf/lede
   REPO_BRANCH: master
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
   CONFIG_FILE: N1-LEDE/.config
   DIY_SH: N1-LEDE/diy.sh
   FILES: N1-LEDE/files
@@ -103,8 +105,11 @@ jobs:
       working-directory: ./
       run: |
         git clone $REPO_URL -b $REPO_BRANCH openwrt
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        mv -f luci-app-passwall.zip openwrt/
         cd openwrt
-        #sed -i 's|https://github.com/coolsnowwolf/luci.git;openwrt-23.05|https://github.com/coolsnowwolf/luci|g' feeds.conf.default
+        $GITHUB_WORKSPACE/$DIY_P1_SH
 
     - name: cache wrt build
       uses: stupidloud/cachewrtbuild@main
@@ -118,14 +123,20 @@ jobs:
       run: |
         ./scripts/feeds update -a
         ./scripts/feeds install -a
+        cd openwrt
+        rm -rf feeds/small/luci-app-passwall
+        unzip luci-app-passwall.zip
+        mv -f luci-app-passwall feeds/small/        
 
     - name: Load custom config
       run: |
         [ -e $FILES ] && mv $FILES openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_SH
+        chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_SH
+        $GITHUB_WORKSPACE/$DIY_P2_SH
 
     # - name: SSH connect to Actions
       # uses: P3TERX/ssh2actions@main
